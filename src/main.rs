@@ -3,20 +3,17 @@ use sysinfo::System;
 use whoami::{arch, distro, username};
 
 fn main() {
-    let mut sys = System::new_all();
-    sys.refresh_all();
+    //let mut sys = System::new();
 
     // println!("{}", "MyFetch".blue());
-
     {
         // HOSTNAME
-        let hostname = format!(
-            "{}@{}",
-            username(),
-            System::host_name().unwrap_or("Unknown".into())
-        );
+        let hostname_raw = std::fs::read_to_string("/etc/hostname").unwrap_or("Unknown".into());
+        let hostname = hostname_raw.lines().next().unwrap_or("Unknown");
 
-        println!("{}", hostname.cyan().bold());
+        let username_hostname = format!("{}@{}", username(), hostname);
+
+        println!("{}", username_hostname.cyan().bold());
     }
 
     {
@@ -50,6 +47,7 @@ fn main() {
 
     {
         // MEMORY
+        /*
         let total_memory = sys.total_memory() as f32;
         let used_memory = sys.used_memory() as f32;
         let percent_used = (used_memory / total_memory) * 100.0; // Get percent used
@@ -62,12 +60,47 @@ fn main() {
         let memory_formatted = format!(
             "{:.2} GiB / {:.2} GiB ({:.1}%)",
             used_memory, total_memory, percent_used
-        );
+        ); */
 
-        print_formatted("Memory", &memory_formatted);
+        if let Some((used, total, percent)) = get_memory() {
+            let memory_formatted = format!("{:.2} GiB / {:.2} GiB ({:.1}%)", used, total, percent);
+            print_formatted("Memory", &memory_formatted);
+        } else {
+            println!("Memory: Unknown");
+        }
     }
 }
 
 fn print_formatted(name: &str, vals: &String) {
     println!("{}: {}", name.bold(), vals);
+}
+
+fn get_memory() -> Option<(f32, f32, f32)> {
+    // Reads /proc/meminfo and stores
+    let contents = std::fs::read_to_string("/proc/meminfo").ok()?;
+
+    // Variables for Total and Available Memory
+    let mut total = 0.0;
+    let mut available = 0.0;
+
+    // Store MemTotal and MemAvailable in their Variables
+    for line in contents.lines() {
+        if line.starts_with("MemTotal:") {
+            total = line.split_whitespace().nth(1)?.parse::<f32>().ok()?;
+        } else if line.starts_with("MemAvailable:") {
+            available = line.split_whitespace().nth(1)?.parse::<f32>().ok()?;
+        }
+
+        // Break after both are saved
+        if total > 0.0 && available > 0.0 {
+            break;
+        }
+    }
+
+    // Calculate Used and Percent Used
+    let used = total - available;
+    let percent = (used / total) * 100.0;
+
+    // Return wrapped vars, from KiB to GiB
+    Some((used / 1024.0 / 1024.0, total / 1024.0 / 1024.0, percent))
 }
