@@ -3,11 +3,8 @@ use sysinfo::System;
 use whoami::{arch, distro, username};
 
 fn main() {
-    //let mut sys = System::new();
-
-    // println!("{}", "MyFetch".blue());
     {
-        // HOSTNAME
+        // USERNAME and HOSTNAME
         let hostname = std::fs::read_to_string("/etc/hostname")
             .unwrap_or("Unknown".into())
             .trim()
@@ -31,9 +28,28 @@ fn main() {
     }
 
     {
+        // CPU and CORES
+        let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").unwrap_or("Unknown".into());
+
+        let cpu = cpuinfo
+            .lines()
+            .find(|l| l.starts_with("model name"))
+            .map(|line| line.split(':').nth(1).unwrap_or("").trim())
+            .unwrap_or("Unknown");
+
+        print_formatted("CPU", &cpu.to_string());
+    }
+
+    {
         // SHELL
         let shell = std::env::var("SHELL").unwrap_or("Unknown".into());
         print_formatted("Shell", &shell);
+    }
+
+    {
+        // DE / WM
+        let we = std::env::var("DESKTOP_SESSION").unwrap_or("Unknown".into());
+        print_formatted("DE/WM", &we);
     }
 
     {
@@ -48,22 +64,6 @@ fn main() {
     }
 
     {
-        // MEMORY
-        /*
-        let total_memory = sys.total_memory() as f32;
-        let used_memory = sys.used_memory() as f32;
-        let percent_used = (used_memory / total_memory) * 100.0; // Get percent used
-
-        // Bytes -> Gigabytes
-        let total_memory = total_memory / 1024.0 / 1024.0 / 1024.0;
-        let used_memory = used_memory / 1024.0 / 1024.0 / 1024.0;
-
-        // Compile into one String
-        let memory_formatted = format!(
-            "{:.2} GiB / {:.2} GiB ({:.1}%)",
-            used_memory, total_memory, percent_used
-        ); */
-
         if let Some((used, total, percent)) = get_memory() {
             let memory_formatted = format!("{:.2} GiB / {:.2} GiB ({:.1}%)", used, total, percent);
             print_formatted("Memory", &memory_formatted);
@@ -74,6 +74,7 @@ fn main() {
 }
 
 fn print_formatted(name: &str, vals: &String) {
+    // For Easy Reformating/Config
     println!("{}: {}", name.bold(), vals);
 }
 
