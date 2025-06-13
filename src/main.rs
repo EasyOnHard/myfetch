@@ -8,8 +8,10 @@ fn main() {
     // println!("{}", "MyFetch".blue());
     {
         // HOSTNAME
-        let hostname_raw = std::fs::read_to_string("/etc/hostname").unwrap_or("Unknown".into());
-        let hostname = hostname_raw.lines().next().unwrap_or("Unknown");
+        let hostname = std::fs::read_to_string("/etc/hostname")
+            .unwrap_or("Unknown".into())
+            .trim()
+            .to_string();
 
         let username_hostname = format!("{}@{}", username(), hostname);
 
